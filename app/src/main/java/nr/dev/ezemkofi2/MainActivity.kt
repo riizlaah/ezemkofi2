@@ -26,6 +26,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -56,7 +57,15 @@ class MainActivity : ComponentActivity() {
                 val scope = rememberCoroutineScope()
                 var loading by remember { mutableStateOf(false) }
                 val ctx = LocalContext.current
-
+                LaunchedEffect(Unit) {
+                    HttpClient.sharedPrefs = ctx.getSharedPreferences("app_prefs", MODE_PRIVATE)
+                    HttpClient.loadToken()
+                    if(HttpClient.me() != null) {
+                        val intent = Intent(ctx, HomeActivity::class.java)
+                        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                        ctx.startActivity(intent)
+                    }
+                }
 
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     Column(
@@ -108,7 +117,6 @@ class MainActivity : ComponentActivity() {
                                             val intent = Intent(ctx, HomeActivity::class.java)
                                             intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                                             ctx.startActivity(intent)
-                                            loading = false
                                         }
                                         else -> {
                                             errMsg = msg

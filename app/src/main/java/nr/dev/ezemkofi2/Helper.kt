@@ -1,5 +1,6 @@
 package nr.dev.ezemkofi2
 
+import android.content.SharedPreferences
 import android.graphics.BitmapFactory
 import android.util.Log
 import androidx.compose.runtime.mutableStateOf
@@ -8,10 +9,13 @@ import androidx.compose.ui.graphics.asImageBitmap
 import kotlinx.coroutines.Dispatchers
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import androidx.core.content.edit
 import kotlinx.coroutines.withContext
+import org.json.JSONArray
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
+import java.net.URLEncoder
 
 data class HttpReq(
     val url: String,
@@ -36,12 +40,50 @@ data class User(
     val email: String
 )
 
+data class Category(
+    val id: Int,
+    val name: String
+)
+
+data class Coffee(
+    val id: Int,
+    val name: String,
+    val category: String,
+    val rating: Double,
+    val price: Double,
+    val imagePath: String,
+    val description: String = ""
+)
+
+data class Cart(
+    val coffeeId: Int,
+    val coffee: Coffee,
+    val size: String,
+    val qty: Int
+)
+
+data class Transaction(
+    val id: Int
+)
+
 object HttpClient {
     val addr = "http://10.0.2.2:5000/"
 
     var token: String = ""
 
+    lateinit var sharedPrefs: SharedPreferences
+
     var user by mutableStateOf<User?>(null)
+
+    fun loadToken() {
+        token = sharedPrefs.getString("token", "") ?: ""
+    }
+
+    fun saveToken() {
+        sharedPrefs.edit {
+            putString("token", token)
+        }
+    }
 
     fun send(req: HttpReq, getByte: Boolean = false): HttpRes {
         val conn = URL(req.url).openConnection() as HttpURLConnection
@@ -91,9 +133,9 @@ object HttpClient {
         }
     }
 
-    suspend fun fetchImg(route: String): ImageBitmap? {
+    suspend fun fetchImg(path: String): ImageBitmap? {
         val res = withContext(Dispatchers.IO) {
-            send(HttpReq(addr + route), true)
+            send(HttpReq(addr + path), true)
         }
         if(res.bytes == null || res.code != 200) return null
         return try {
@@ -116,7 +158,7 @@ object HttpClient {
         val res = jsonReq("api/auth", """{"username": "$username", "password": "$password"}""", "POST")
         if(res.code != 200 || res.body.isNullOrEmpty()) return res.body ?: "Login Failed"
         token = res.body
-        println(token)
+        saveToken()
         return "ok"
     }
 
@@ -138,5 +180,83 @@ object HttpClient {
             obj.getString("email"),
         )
 
+    }
+
+    // coffees
+    suspend fun getCoffees(search: String = "", categoryId: Int = 0): List<Coffee> {
+        var url = "api/coffee"
+        if(search.isNotBlank()) {
+            url += "?search=" + URLEncoder.encode(search, "UTF-8")
+            if(categoryId > 0) {
+                url += "&coffeeCategoryID=$categoryId"
+            }
+        } else if(categoryId > 0) {
+            url += "?coffeeCategoryID=$categoryId"
+        }
+        val res = jsonReq(url)
+        if(res.body.isNullOrEmpty() || res.code != 200) return emptyList()
+        val arr = mutableListOf<Coffee>()
+        val json = JSONArray(res.body)
+        for(i in 0 until json.length()) {
+            val obj = json.getJSONObject(i)
+            arr.add(Coffee(
+                obj.getInt("id"),
+                obj.getString("name"),
+                obj.getString("category"),
+                obj.getDouble("rating"),
+                obj.getDouble("price"),
+                obj.getString("imagePath"),
+            ))
+        }
+        return arr
+    }
+
+    suspend fun getTopCoffees(): List<Coffee> {
+        val res = jsonReq("api/coffee/top-picks")
+        if(res.body.isNullOrEmpty() || res.code != 200) return emptyList()
+        val arr = mutableListOf<Coffee>()
+        val json = JSONArray(res.body)
+        for(i in 0 until json.length()) {
+            val obj = json.getJSONObject(i)
+            arr.add(Coffee(
+                obj.getInt("id"),
+                obj.getString("name"),
+                obj.getString("category"),
+                obj.getDouble("rating"),
+                obj.getDouble("price"),
+                obj.getString("imagePath")
+            ))
+        }
+        return arr
+    }
+
+    suspend fun getCategories(): List<Category> {
+        val res = jsonReq("api/coffee-category")
+        if(res.body.isNullOrEmpty() || res.code != 200) return emptyList()
+        val arr = mutableListOf<Category>()
+        val json = JSONArray(res.body)
+        for(i in 0 until json.length()) {
+            val obj = json.getJSONObject(i)
+            arr.add(Category(
+                obj.getInt("id"),
+                obj.getString("name")
+            ))
+        }
+        return arr
+    }
+
+    suspend fun getCoffeeById(id: Int): Coffee? {
+        val res = jsonReq("api/coffee/$id")
+        if(res.body.isNullOrEmpty() || res.code != 200) return null
+        val obj = JSONObject(res.body)
+        return Coffee(
+            obj.getInt("id"),
+            obj.getString("name"),
+            obj.getString("category"),
+            obj.getDouble("rating"),
+            obj.getDouble("price"),
+            obj.getString("imagePath"),
+            obj.getString("description")
+        )
     }
 }
