@@ -1,5 +1,6 @@
 package nr.dev.ezemkofi2
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -39,6 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -53,6 +55,7 @@ class SearchActivity : ComponentActivity() {
             Ezemkofi2Theme {
                 var search by remember { mutableStateOf("") }
                 val coffees = remember { mutableStateListOf<Coffee>() }
+                val ctx = LocalContext.current
 
                 LaunchedEffect(Unit) {
                     coffees.addAll(HttpClient.getCoffees(search))
@@ -74,7 +77,9 @@ class SearchActivity : ComponentActivity() {
                             .padding(24.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Row(Modifier.fillMaxWidth().padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Row(Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                             Icon(
                                 painterResource(R.drawable.chevron_left_regular_24),
                                 contentDescription = "Back",
@@ -85,6 +90,8 @@ class SearchActivity : ComponentActivity() {
                                     .clip(CircleShape)
                                     .background(Color.White)
                                     .clickable(onClick = {
+                                        val intent = Intent(ctx, HomeActivity::class.java)
+                                        ctx.startActivity(intent)
                                         finish()
                                     })
                             )
@@ -125,7 +132,12 @@ class SearchActivity : ComponentActivity() {
                                 Row(
                                     Modifier
                                         .padding(vertical = 8.dp)
-                                        .fillMaxWidth(),
+                                        .fillMaxWidth()
+                                        .clickable(onClick = {
+                                            val intent = Intent(ctx, DetailActivity::class.java)
+                                            intent.putExtra("id", item.id)
+                                            ctx.startActivity(intent)
+                                        }),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Box(
@@ -162,7 +174,7 @@ class SearchActivity : ComponentActivity() {
                                         )
                                         Spacer(Modifier.height(24.dp))
                                         Text(
-                                            "$%.2f".format(item.price),
+                                            "$${item.price}",
                                             fontWeight = FontWeight.SemiBold
                                         )
                                     }

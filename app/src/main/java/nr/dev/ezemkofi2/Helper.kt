@@ -8,6 +8,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import kotlinx.coroutines.Dispatchers
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.setValue
 import androidx.core.content.edit
 import kotlinx.coroutines.withContext
@@ -55,6 +56,11 @@ data class Coffee(
     val description: String = ""
 )
 
+data class CoffeeSize(
+    val name: String,
+    val scale: Double
+)
+
 data class Cart(
     val coffeeId: Int,
     val coffee: Coffee,
@@ -74,6 +80,8 @@ object HttpClient {
     lateinit var sharedPrefs: SharedPreferences
 
     var user by mutableStateOf<User?>(null)
+
+    val carts = mutableStateListOf<Cart>()
 
     fun loadToken() {
         token = sharedPrefs.getString("token", "") ?: ""
@@ -258,5 +266,75 @@ object HttpClient {
             obj.getString("imagePath"),
             obj.getString("description")
         )
+    }
+
+    fun addToCart(coffee: Coffee, size: String, qty: Int) {
+        val idx = carts.indexOfFirst { it.coffeeId == coffee.id && it.size == size }
+        if(idx > -1) {
+            carts[idx] = carts[idx].copy(qty = carts[idx].qty + qty)
+            return
+        }
+        carts.add(Cart(coffee.id, coffee, size, qty))
+        saveCart()
+    }
+
+    fun removeFromCart(coffeeId: Int, size: String) {
+        carts.removeIf { it.coffeeId == coffeeId && it.size == size }
+        saveCart()
+    }
+
+    fun updateCartQty(coffeeId: Int, size: String, qty: Int) {
+        val idx = carts.indexOfFirst { it.coffeeId == coffeeId && it.size == size }
+        if(idx > -1) carts[idx] = carts[idx].copy(qty = qty)
+        saveCart()
+    }
+
+    fun saveCart() {
+        sharedPrefs.edit {
+            var data = "["
+            carts.forEach {
+                val coff = it.coffee
+                data += """{"coffeeId": ${it.coffeeId}, "coffee": {"id": ${coff.id}, "name": "${coff.name}", "category": "${coff.category}", "rating": ${coff.rating}, "price": ${coff.price}, "imagePath": "${coff.imagePath}"}, "size": "${it.size}", "qty": ${it.qty}},"""
+            }
+            data = data.trimEnd(',')
+            data += "]"
+            putString("carts", data)
+        }
+    }
+
+    fun loadCart() {
+        val json = sharedPrefs.getString("carts", "") ?: ""
+        if(json.isBlank()) return
+        val arr = JSONArray(json)
+        for(i in 0 until arr.length()) {
+            val obj = arr.getJSONObject(i)
+            val coffObj = obj.getJSONObject("coffee")
+            val coff = Coffee(
+                coffObj.getInt("id"),
+                coffObj.getString("name"),
+                coffObj.getString("category"),
+                coffObj.getDouble("rating"),
+                coffObj.getDouble("price"),
+                coffObj.getString("imagePath")
+            )
+            carts.add(Cart(
+                coff.id,
+                coff,
+                obj.getString("size"),
+                obj.getInt("qty")
+            ))
+        }
+    }
+
+    suspend fun checkout() {
+        var body = "["
+        carts.forEach {
+            body += """{"coffeeId": ${it.coffeeId}, "size": "${it.size}", "qty": ${it.qty}},"""
+        }
+        body = body.trimEnd(',')
+        val res = jsonReq("api/checkout", body, "POST")
+        carts.clear()
+        saveCart()
+        println(res)
     }
 }

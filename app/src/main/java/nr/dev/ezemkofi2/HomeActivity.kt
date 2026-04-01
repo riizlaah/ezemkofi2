@@ -67,7 +67,8 @@ class HomeActivity : ComponentActivity() {
 
                 LaunchedEffect(Unit) {
                     user = HttpClient.me()
-                    if (coffees.isEmpty()) {
+                    if (categories.isEmpty()) {
+                        HttpClient.loadCart()
                         categories.addAll(HttpClient.getCategories())
                         currentCategory = categories[0].id
                         topPickCoffees.addAll(HttpClient.getTopCoffees())
@@ -102,7 +103,10 @@ class HomeActivity : ComponentActivity() {
                                     fontSize = MaterialTheme.typography.titleMedium.fontSize
                                 )
                             }
-                            IconButton({}) {
+                            IconButton({
+                                val intent = Intent(ctx, CartActivity::class.java)
+                                ctx.startActivity(intent)
+                            }) {
                                 Icon(
                                     painterResource(R.drawable.shopping_bag_regular_24),
                                     contentDescription = "Cart",
@@ -187,7 +191,13 @@ class HomeActivity : ComponentActivity() {
                                                         cornerRadius = CornerRadius(24f, 24f)
                                                     )
                                                 }
-                                                .padding(16.dp, 24.dp)) {
+                                                .padding(16.dp, 24.dp)
+                                                .clickable(onClick = {
+                                                    val intent = Intent(ctx, DetailActivity::class.java)
+                                                    intent.putExtra("id", item.id)
+                                                    ctx.startActivity(intent)
+                                                })
+                                        ) {
                                             Box(Modifier.width(192.dp)) {
                                                 NetworkImage(
                                                     "images/${item.imagePath}",
@@ -241,7 +251,12 @@ class HomeActivity : ComponentActivity() {
                                 Row(
                                     Modifier
                                         .padding(vertical = 8.dp)
-                                        .fillMaxWidth(),
+                                        .fillMaxWidth()
+                                        .clickable(onClick = {
+                                            val intent = Intent(ctx, DetailActivity::class.java)
+                                            intent.putExtra("id", item.id)
+                                            ctx.startActivity(intent)
+                                        }),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Box(
