@@ -41,6 +41,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -93,14 +94,28 @@ class HomeActivity : ComponentActivity() {
                         Row(
                             Modifier
                                 .fillMaxWidth()
-                                .padding(24.dp),
+                                .padding(vertical = 24.dp, horizontal = 12.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
+                            IconButton({
+                                HttpClient.token = ""
+                                HttpClient.saveToken()
+                                val intent = Intent(ctx, MainActivity::class.java)
+                                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                                ctx.startActivity(intent)
+                            }) {
+                                Icon(
+                                    painterResource(R.drawable.logout),
+                                    contentDescription = "Logout",
+                                    modifier = Modifier.size(24.dp).rotate(180f)
+                                )
+                            }
                             Column(Modifier.weight(1f)) {
                                 Text("Good Morning")
                                 Text(
                                     user!!.fullName,
-                                    fontSize = MaterialTheme.typography.titleMedium.fontSize
+                                    fontSize = MaterialTheme.typography.titleLarge.fontSize,
+                                    fontWeight = FontWeight.Medium
                                 )
                             }
                             IconButton({
@@ -117,7 +132,7 @@ class HomeActivity : ComponentActivity() {
                         LazyColumn(
                             Modifier
                                 .weight(1f)
-                                .padding(24.dp)
+                                .padding(vertical = 12.dp, horizontal = 24.dp)
                         ) {
                             item {
                                 Box(

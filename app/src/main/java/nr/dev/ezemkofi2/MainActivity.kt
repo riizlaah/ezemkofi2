@@ -64,6 +64,9 @@ class MainActivity : ComponentActivity() {
                         val intent = Intent(ctx, HomeActivity::class.java)
                         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                         ctx.startActivity(intent)
+                    } else {
+                        HttpClient.token = ""
+                        HttpClient.saveToken()
                     }
                 }
 
